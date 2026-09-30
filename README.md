@@ -23,7 +23,7 @@ Los orígenes son las áreas del Censo 2022:
 | 9 | Gran Neuquén | Neuquén y Río Negro | 551.988 |
 | 10 | Gran San Juan | San Juan | 546.613 |
 
-La escala de color (del cian al rojo) sigue la lectura del mapa de habitantes por hexágono de 600 m: más gente, más calor. Acá marca de dónde sale la demanda, no la densidad de un barrio.
+El puesto en el ranking usa color según la población: más gente, más calor.
 
 ## Cómo se usa
 

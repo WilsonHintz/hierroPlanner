@@ -1,5 +1,5 @@
 import { addMinutes, format } from "date-fns";
-import { es } from "date-fns/locale";
+import { es } from "date-fns/locale/es";
 import {
   BUS_CLASS,
   FOOD_PER_DAY,
@@ -235,4 +235,210 @@ export function summaryText(input: PlanInput, plan: Plan): string {
     "Tarifas de referencia, septiembre 2026. Confirmá en la empresa antes de comprar. No es una boletería.",
   );
   return lines.join("\n");
+}
+
+const SHOW_HOURS = 3;
+
+export type TimelineKind = "bus" | "show" | "stay";
+
+export type TimelineSegment = {
+  id: string;
+  kind: TimelineKind;
+  label: string;
+  detail: string;
+  start: Date;
+  end: Date;
+};
+
+export type TimelineDay = {
+  index: number;
+  date: Date;
+  weekday: string;
+};
+
+export type TripTimeline = {
+  days: TimelineDay[];
+  segments: TimelineSegment[];
+  caption: string;
+};
+
+function dayStart(d: Date): Date {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+function dayShift(d: Date, n: number): Date {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+}
+
+function spanLabel(ms: number): string {
+  const total = Math.max(0, Math.round(ms / 60000));
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  if (h <= 0) return `${m} min`;
+  return m ? `${h} h ${m}` : `${h} h`;
+}
+
+function sleepWindow(evening: Date, showStart: Date, showEnd: Date): { start: Date; end: Date } {
+  let start = new Date(evening);
+  start.setHours(23, 0, 0, 0);
+  const end = dayShift(evening, 1);
+  end.setHours(8, 0, 0, 0);
+  if (dayStart(evening).getTime() === dayStart(showStart).getTime() && start.getTime() < showEnd.getTime()) {
+    start = new Date(showEnd);
+  }
+  if (start.getTime() >= end.getTime()) end.setTime(start.getTime() + 3 * 60 * 60 * 1000);
+  return { start, end };
+}
+
+function nightsBefore(arrival: Date | null, showStart: Date, local: boolean, pace: Pace): Date[] {
+  const showDay = dayStart(showStart);
+  if (local) return pace === "holgado" ? [dayShift(showDay, -1)] : [];
+  if (!arrival) return [];
+  let cursor = dayStart(arrival);
+  if (arrival.getHours() >= 23) cursor = dayShift(cursor, 1);
+  const dates: Date[] = [];
+  while (cursor.getTime() < showDay.getTime()) {
+    dates.push(cursor);
+    cursor = dayShift(cursor, 1);
+  }
+  return dates;
+}
+
+function stayEvenings(
+  nights: number,
+  showStart: Date,
+  arrival: Date | null,
+  local: boolean,
+  pace: Pace,
+): Date[] {
+  if (nights <= 0) return [];
+  const showDay = dayStart(showStart);
+  const before = nightsBefore(arrival, showStart, local, pace);
+  const chosen = [showDay];
+  let left = nights - 1;
+  for (let i = before.length - 1; i >= 0 && left > 0; i -= 1) {
+    chosen.push(before[i]);
+    left -= 1;
+  }
+  let extra = 1;
+  while (left > 0) {
+    chosen.push(dayShift(showDay, extra));
+    extra += 1;
+    left -= 1;
+  }
+  return chosen.sort((a, b) => a.getTime() - b.getTime());
+}
+
+export function buildTimeline(
+  show: Show,
+  plan: Pick<Plan, "outbound" | "inbound" | "nights">,
+  options: { roundTrip: boolean; local: boolean; pace: Pace },
+): TripTimeline {
+  const showStart = at(show.date, show.doors || "21:00");
+  const showEnd = addMinutes(showStart, SHOW_HOURS * 60);
+  const segments: TimelineSegment[] = [];
+
+  if (!options.local && plan.outbound) {
+    const hours = spanLabel(plan.outbound.arrive.getTime() - plan.outbound.depart.getTime());
+    segments.push({
+      id: "ida",
+      kind: "bus",
+      label: "Ida",
+      detail: `Salida ${cap(when(plan.outbound.depart, "EEE HH:mm"))} · ${hours} hasta ${cap(when(plan.outbound.arrive, "EEE HH:mm"))}`,
+      start: plan.outbound.depart,
+      end: plan.outbound.arrive,
+    });
+  }
+
+  segments.push({
+    id: "show",
+    kind: "show",
+    label: "Recital",
+    detail: `Puertas ${cap(when(showStart, "EEE HH:mm"))} · unas ${SHOW_HOURS} h, hasta ${cap(when(showEnd, "HH:mm"))}`,
+    start: showStart,
+    end: showEnd,
+  });
+
+  if (!options.local && options.roundTrip && plan.inbound) {
+    const hours = spanLabel(plan.inbound.arrive.getTime() - plan.inbound.depart.getTime());
+    segments.push({
+      id: "vuelta",
+      kind: "bus",
+      label: "Vuelta",
+      detail: `Salida ${cap(when(plan.inbound.depart, "EEE HH:mm"))} · ${hours} hasta ${cap(when(plan.inbound.arrive, "EEE HH:mm"))}`,
+      start: plan.inbound.depart,
+      end: plan.inbound.arrive,
+    });
+  }
+
+  const showDay = dayStart(showStart);
+  const evenings = stayEvenings(
+    plan.nights,
+    showStart,
+    plan.outbound?.arrive ?? null,
+    options.local,
+    options.pace,
+  );
+  let hasBefore = false;
+  let hasAfter = false;
+  evenings.forEach((evening, index) => {
+    const before = evening.getTime() < showDay.getTime();
+    if (before) hasBefore = true;
+    else hasAfter = true;
+    const sleep = sleepWindow(evening, showStart, showEnd);
+    const label = before ? "Antes" : "Después";
+    segments.push({
+      id: `stay-${index}`,
+      kind: "stay",
+      label,
+      detail: `Dormís ${before ? "antes" : "después"} del recital · ${cap(when(sleep.start, "EEE HH:mm"))} – ${cap(when(sleep.end, "EEE HH:mm"))}`,
+      start: sleep.start,
+      end: sleep.end,
+    });
+  });
+
+  let minT = showStart.getTime();
+  let maxT = showEnd.getTime();
+  for (const seg of segments) {
+    minT = Math.min(minT, seg.start.getTime());
+    maxT = Math.max(maxT, seg.end.getTime());
+  }
+  const first = dayStart(new Date(minT));
+  let last = dayStart(new Date(maxT));
+  if (maxT === last.getTime()) last = dayShift(last, -1);
+  if (last.getTime() < first.getTime()) last = first;
+
+  const days: TimelineDay[] = [];
+  for (
+    let date = first, index = 1;
+    date.getTime() <= last.getTime() && index <= 12;
+    date = dayShift(date, 1), index += 1
+  ) {
+    days.push({
+      index,
+      date,
+      weekday: cap(when(date, "EEE d")),
+    });
+  }
+
+  const parts: string[] = [];
+  if (!options.local && plan.outbound) {
+    parts.push(
+      `Salís ${cap(when(plan.outbound.depart, "EEE HH:mm"))} · ${spanLabel(plan.outbound.arrive.getTime() - plan.outbound.depart.getTime())} de micro`,
+    );
+  } else {
+    parts.push("Sin micro");
+  }
+  parts.push(`recital ${cap(when(showStart, "EEE HH:mm"))} · unas ${SHOW_HOURS} h`);
+  if (!options.local && options.roundTrip && plan.inbound) {
+    parts.push(`volvés ${cap(when(plan.inbound.depart, "EEE HH:mm"))}`);
+  } else if (!options.local) {
+    parts.push("sin vuelta");
+  }
+  if (plan.nights <= 0) parts.push("sin estadía");
+  else if (hasBefore && hasAfter) parts.push("dormís antes y después");
+  else if (hasBefore) parts.push("dormís antes del recital");
+  else parts.push("dormís después del recital");
+
+  return { days, segments, caption: parts.join(" · ") };
 }

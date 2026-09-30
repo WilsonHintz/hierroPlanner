@@ -349,14 +349,6 @@ export const BUS_CLASS = {
 
 export type BusClass = keyof typeof BUS_CLASS;
 
-export const HEAT_LEGEND = [
-  { id: "h1", range: "1 – 20", box: "bg-heat-1", ink: "text-rust-ink" },
-  { id: "h2", range: "20 – 50", box: "bg-heat-2", ink: "text-rust-ink" },
-  { id: "h3", range: "50 – 1000", box: "bg-heat-3", ink: "text-rust-ink" },
-  { id: "h4", range: "1000 – 8000", box: "bg-heat-4", ink: "text-rust-ink" },
-  { id: "h5", range: "8000 – 20000", box: "bg-heat-5", ink: "text-fg" },
-] as const;
-
 const RANK_TONE = [
   { box: "bg-heat-1", ink: "text-rust-ink" },
   { box: "bg-heat-2", ink: "text-rust-ink" },

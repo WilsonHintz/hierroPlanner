@@ -16,7 +16,6 @@ import {
   BUS_CLASS,
   CITIES,
   FOOD_PER_DAY,
-  HEAT_LEGEND,
   LODGINGS,
   SHOWS,
   TERMINAL_REMIS,
@@ -29,6 +28,7 @@ import {
 import {
   ars,
   buildPlan,
+  buildTimeline,
   cap,
   formatHours,
   people,
@@ -44,7 +44,10 @@ const field =
   "h-11 w-full rounded-lg border border-line bg-bg px-3 text-base text-fg outline-none";
 
 function allShows(custom: Show[]): Show[] {
-  return [...SHOWS, ...custom].sort((a, b) => a.date.localeCompare(b.date));
+  const extra = (Array.isArray(custom) ? custom : []).filter(
+    (show) => show && typeof show.date === "string" && typeof show.id === "string" && show.artist,
+  );
+  return [...SHOWS, ...extra].sort((a, b) => a.date.localeCompare(b.date));
 }
 
 function resolveDraft(draft: Draft, custom: Show[]) {
@@ -118,39 +121,20 @@ export function HierroApp() {
 
   return (
     <main className="mx-auto min-w-0 max-w-6xl overflow-x-clip px-4 pb-24 pt-6 sm:px-6 sm:pt-8">
-      <header className="grid gap-6 border-b border-line pb-6 lg:grid-cols-2 lg:items-end">
-        <div>
-          <p className="flex items-center gap-2 text-sm font-semibold tracking-wide text-rust">
-            <Hexagon className="size-4" aria-hidden="true" />
-            Planificador · no es boletería
-          </p>
-          <h1 className="mt-2 font-poster text-5xl tracking-wide text-fg sm:text-6xl">HIERRO</h1>
-          <p className="mt-2 max-w-xl text-lg text-fg">
-            Pasajes de colectivo y estadía a Córdoba para recitales de heavy metal, saliendo de las
-            10 áreas urbanas más pobladas del país.
-          </p>
-          <p className="mt-2 max-w-xl text-muted">
-            Censo 2022. Tarifas de referencia de septiembre de 2026: el semicama Buenos Aires–Córdoba
-            arranca cerca de {ars(38_000)}. Ajustalas antes de comprar.
-          </p>
-        </div>
-        <aside className="rounded-card border border-line bg-surface p-4">
-          <p className="text-sm font-semibold text-fg">
-            Cantidad de habitantes en hexágonos regulares de 600m de lado
-          </p>
-          <ul className="mt-3 grid gap-1.5">
-            {HEAT_LEGEND.map((row) => (
-              <li key={row.id} className="flex items-center gap-2 text-sm text-muted">
-                <span className={`size-3.5 shrink-0 rounded-sm ${row.box}`} aria-hidden="true" />
-                {row.range}
-              </li>
-            ))}
-          </ul>
-          <p className="mt-3 text-sm text-faint">
-            En el mapa, el rojo es más gente por hexágono. Acá el mismo calor marca las áreas de
-            donde sale la demanda.
-          </p>
-        </aside>
+      <header className="border-b border-line pb-6">
+        <p className="flex items-center gap-2 text-sm font-semibold tracking-wide text-rust">
+          <Hexagon className="size-4" aria-hidden="true" />
+          Planificador · no es boletería
+        </p>
+        <h1 className="mt-2 font-poster text-5xl tracking-wide text-fg sm:text-6xl">HIERRO</h1>
+        <p className="mt-2 max-w-xl text-lg text-fg">
+          Pasajes de colectivo y estadía a Córdoba para recitales de heavy metal, saliendo de las
+          10 áreas urbanas más pobladas del país.
+        </p>
+        <p className="mt-2 max-w-xl text-muted">
+          Censo 2022. Tarifas de referencia de septiembre de 2026: el semicama Buenos Aires–Córdoba
+          arranca cerca de {ars(38_000)}. Ajustalas antes de comprar.
+        </p>
       </header>
 
       <section className="mt-8" aria-labelledby="cartelera">
@@ -250,6 +234,13 @@ export function HierroApp() {
             </p>
             <p className="text-muted">{ars(plan.perPerson)} por persona</p>
           </div>
+          <TripScale
+            show={show}
+            plan={plan}
+            roundTrip={draft.roundTrip}
+            local={!!city.local}
+            pace={draft.pace}
+          />
 
           <div className="grid gap-5 px-4 py-5 sm:px-5">
             <div>
@@ -666,6 +657,154 @@ function Row({ k, v }: { k: string; v: number }) {
     <div className="flex items-baseline justify-between gap-4 border-b border-line py-2 text-sm">
       <dt className="min-w-0 text-muted">{k}</dt>
       <dd className="shrink-0 tabular-nums font-semibold text-fg">{ars(v)}</dd>
+    </div>
+  );
+}
+
+function TripScale({
+  show,
+  plan,
+  roundTrip,
+  local,
+  pace,
+}: {
+  show: Show;
+  plan: ReturnType<typeof buildPlan>;
+  roundTrip: boolean;
+  local: boolean;
+  pace: Pace;
+}) {
+  const timeline = (() => {
+    try {
+      return buildTimeline(show, plan, { roundTrip, local, pace });
+    } catch {
+      return null;
+    }
+  })();
+  if (!timeline || timeline.days.length === 0) return null;
+  const origin = timeline.days[0]?.date ?? new Date();
+  const span = Math.max(timeline.days.length, 1) * 24 * 60 * 60 * 1000;
+  const leftOf = (date: Date) => ((date.getTime() - origin.getTime()) / span) * 100;
+  const widthOf = (start: Date, end: Date) => ((end.getTime() - start.getTime()) / span) * 100;
+
+  const marks = timeline.segments
+    .filter((seg) => seg.kind === "bus" || seg.kind === "show")
+    .map((seg) => ({
+      id: seg.id,
+      left: leftOf(seg.start),
+      text: when(seg.start, "HH:mm"),
+      tone: seg.kind === "show" ? "text-heat-5" : "text-rust",
+      priority: seg.kind === "show" ? 2 : seg.id === "ida" ? 1 : 0,
+    }))
+    .sort((a, b) => b.priority - a.priority);
+  const visibleMarks = marks.filter(
+    (mark, _, all) => !all.some((other) => other.priority > mark.priority && Math.abs(other.left - mark.left) < 9),
+  );
+
+  return (
+    <div className="border-b border-line px-4 py-3 sm:px-5">
+      <div className="overflow-x-auto overscroll-x-contain">
+        <div className="w-full" style={{ minWidth: `${Math.max(timeline.days.length, 1) * 7.25}rem` }}>
+          <div className="flex">
+            {timeline.days.map((day) => (
+              <div key={day.index} className="min-w-0 flex-1 border-l border-transparent px-1 first:border-l-0">
+                <p className="truncate font-poster text-sm tracking-wide text-fg">Día {day.index}</p>
+                <p className="truncate text-[11px] text-faint">{day.weekday}</p>
+              </div>
+            ))}
+          </div>
+          <div className="relative mt-1 h-4">
+            {visibleMarks.map((mark) => (
+              <span
+                key={mark.id}
+                className={`absolute top-0 text-[10px] font-semibold leading-none tabular-nums ${mark.tone}`}
+                style={
+                  mark.left < 5
+                    ? { left: 0 }
+                    : mark.left > 95
+                      ? { right: 0 }
+                      : { left: `${mark.left}%`, transform: "translateX(-50%)" }
+                }
+              >
+                {mark.text}
+              </span>
+            ))}
+          </div>
+          <div className="relative h-12 rounded-md bg-bg" role="img" aria-label={timeline.caption}>
+            <div className="absolute inset-0 flex">
+              {timeline.days.map((day) => (
+                <div key={day.index} className="relative flex-1 border-l border-line first:border-l-0">
+                  {[6, 12, 18].map((hour) => (
+                    <span
+                      key={hour}
+                      className="absolute inset-y-0 border-l border-dashed border-line"
+                      style={{ left: `${(hour / 24) * 100}%` }}
+                    />
+                  ))}
+                </div>
+              ))}
+            </div>
+            {timeline.segments.map((seg) => {
+              const lane = seg.kind === "stay" ? "bottom-1 h-4" : "top-1 h-4";
+              const tone =
+                seg.kind === "bus"
+                  ? "bg-rust text-rust-ink"
+                  : seg.kind === "show"
+                    ? "bg-heat-5 text-fg"
+                    : "bg-heat-1 text-rust-ink";
+              const hours = (seg.end.getTime() - seg.start.getTime()) / 3_600_000;
+              const width = widthOf(seg.start, seg.end);
+              const fits = (hours / 24) * 7.25 > seg.label.length * 0.42;
+              return (
+                <div
+                  key={seg.id}
+                  title={seg.detail}
+                  className={`absolute z-10 overflow-hidden rounded-sm px-1 text-[10px] font-semibold leading-4 ${lane} ${tone}`}
+                  style={{ left: `${leftOf(seg.start)}%`, width: `${width}%` }}
+                >
+                  {fits ? seg.label : ""}
+                </div>
+              );
+            })}
+          </div>
+          <div className="mt-1 flex">
+            {timeline.days.map((day) => (
+              <div key={day.index} className="relative h-3 flex-1 text-[10px] leading-none text-faint tabular-nums">
+                {[0, 6, 12, 18].map((hour) => (
+                  <span
+                    key={hour}
+                    className="absolute"
+                    style={
+                      hour === 0
+                        ? { left: 2 }
+                        : { left: `${(hour / 24) * 100}%`, transform: "translateX(-50%)" }
+                    }
+                  >
+                    {hour}
+                  </span>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+      <ul className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted">
+        {local ? null : (
+          <li className="inline-flex items-center gap-1.5">
+            <span className="size-2.5 rounded-sm bg-rust" aria-hidden="true" />
+            Micro
+          </li>
+        )}
+        <li className="inline-flex items-center gap-1.5">
+          <span className="size-2.5 rounded-sm bg-heat-5" aria-hidden="true" />
+          Recital · 3 h
+        </li>
+        <li className="inline-flex items-center gap-1.5">
+          <span className="size-2.5 rounded-sm bg-heat-1" aria-hidden="true" />
+          Dormir
+        </li>
+      </ul>
+      <p className="mt-1 text-sm text-muted">{timeline.caption}</p>
     </div>
   );
 }
