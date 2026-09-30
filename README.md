@@ -28,7 +28,7 @@ La escala de color (del cian al rojo) sigue la lectura del mapa de habitantes po
 ## Cómo se usa
 
 1. Elegí un recital de la cartelera, o cargá uno real (banda, fecha, venue y precio de entrada).
-2. Elegí desde dónde salís.
+2. Elegí desde dónde salís. Debajo del ranking, el mapa marca la provincia y dibuja la flecha desde esa ciudad hasta la ciudad de Córdoba.
 3. Ajustá personas, categoría del micro (semicama, cama, cama suite), ida y vuelta, ritmo del viaje y noches.
 4. Elegí dónde dormir: hostel en Nueva Córdoba, hotel simple en Centro, hotel en Nueva Córdoba o depto en Güemes.
 5. Sumá o sacá comida, remises y merch.

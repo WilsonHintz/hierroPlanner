@@ -66,6 +66,58 @@
   }
 }
 
+.ar-map .prov {
+  fill: var(--color-surface-2);
+  stroke: var(--color-line);
+  stroke-width: 1;
+  stroke-linejoin: round;
+}
+
+.ar-map .prov.is-dest {
+  fill: color-mix(in srgb, var(--color-heat-4) 48%, var(--color-surface));
+  stroke: var(--color-heat-5);
+  stroke-width: 1.6;
+}
+
+.ar-map .prov.is-origin {
+  fill: var(--color-rust);
+  stroke: var(--color-rust-ink);
+  stroke-width: 1.6;
+}
+
+.ar-map .city-pin {
+  stroke: var(--color-fg);
+  stroke-width: 1.4;
+}
+
+.ar-map .city-pin.is-origin {
+  fill: var(--color-fg);
+  stroke: var(--color-rust-ink);
+  stroke-width: 1.6;
+}
+
+.ar-map .city-pin.is-dest {
+  fill: var(--color-heat-5);
+}
+
+.ar-map .city-label {
+  fill: var(--color-fg);
+  stroke: var(--color-bg);
+  font-family: var(--font-poster);
+  font-weight: 600;
+}
+
+.ar-map .route {
+  fill: none;
+  stroke: var(--color-fg);
+  stroke-width: 2.8;
+  stroke-linecap: round;
+}
+
+.ar-map .arrow-head {
+  fill: var(--color-fg);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

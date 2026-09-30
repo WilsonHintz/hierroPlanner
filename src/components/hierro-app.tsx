@@ -37,6 +37,7 @@ import {
   type Pace,
   type PlanInput,
 } from "@/lib/plan";
+import { ArgentinaMap } from "@/components/argentina-map";
 import { useHierro, type Draft } from "@/lib/plans-store";
 
 const field =
@@ -238,6 +239,7 @@ export function HierroApp() {
               );
             })}
           </ul>
+          <ArgentinaMap cityId={city.id} />
         </section>
 
         <section className="order-1 min-w-0 rounded-card border border-line bg-surface lg:order-2" aria-labelledby="paquete">
