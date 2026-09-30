@@ -1,0 +1,38 @@
+{
+  "url": "http://127.0.0.1:8081/",
+  "viewports": {
+    "desktop": {
+      "width": 1280,
+      "height": 800,
+      "status": 200,
+      "title": "Hierro",
+      "hasCanvas": false,
+      "bodyTextLen": 4387,
+      "bodyTextHash": "fd6fbe42c85965868ce28b391ea98932b603e7fb46be8fd7ab410f8b24194e33",
+      "bodyTextPrefix": "Planificador · no es boletería HIERRO Pasajes de colectivo y est",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-built.png"
+    },
+    "mobile": {
+      "width": 390,
+      "height": 844,
+      "status": 200,
+      "title": "Hierro",
+      "hasCanvas": false,
+      "bodyTextLen": 4387,
+      "bodyTextHash": "fd6fbe42c85965868ce28b391ea98932b603e7fb46be8fd7ab410f8b24194e33",
+      "bodyTextPrefix": "Planificador · no es boletería HIERRO Pasajes de colectivo y est",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-built-mobile.png"
+    }
+  },
+  "brandWarnings": [],
+  "authWarnings": [],
+  "verdictFile": "/workspace/screenshots/app-builder-built.json",
+  "divergesFromBaseline": false,
+  "baselineReasons": []
+}

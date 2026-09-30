@@ -1,0 +1,78 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #14110e;
+  --color-surface: #1e1915;
+  --color-surface-2: #2a241e;
+  --color-fg: #f4efe6;
+  --color-muted: #b6aa9c;
+  --color-faint: #8c7f72;
+  --color-line: #3d342c;
+  --color-rust: #e25b12;
+  --color-rust-ink: #2a1208;
+  --color-heat-1: #3dccc7;
+  --color-heat-2: #3dcc3a;
+  --color-heat-3: #e6d23a;
+  --color-heat-4: #f07a1a;
+  --color-heat-5: #c4232a;
+  --font-poster: "Oswald", "Arial Narrow", sans-serif;
+  --font-sans: "Source Sans 3", "Segoe UI", sans-serif;
+  --radius-card: 0.9rem;
+}
+
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  html {
+    background: var(--color-bg);
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background:
+      radial-gradient(ellipse 80% 50% at 100% -10%, #2a2118 0%, transparent 55%),
+      var(--color-bg);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    font-size: 1.0625rem;
+    line-height: 1.5;
+  }
+
+  h1,
+  h2,
+  h3,
+  .font-poster {
+    font-family: var(--font-poster);
+  }
+
+  input,
+  select,
+  textarea {
+    color-scheme: dark;
+  }
+
+  ::selection {
+    background: var(--color-rust);
+    color: var(--color-fg);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-rust);
+    outline-offset: 2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
